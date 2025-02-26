@@ -21,7 +21,6 @@ jugador_y = ALTO - 80
 jugador_velocidad = 5
 jugador_cooldown = 0
 jugador_cooldown_max = 20
-
 # Wilkins Ismael Gervacio Carpio 23-EISN-2-036
 # Configuración de enemigos
 enemigos = []
@@ -37,24 +36,26 @@ TIEMPO_DISPARO_ENEMIGO = 90
 disparos = []
 velocidad_disparo = -7
 explosiones = []
-
 # Wilkins Ismael Gervacio Carpio 23-EISN-2-036
+# Puntuación
+puntos = 0
+PUNTOS_MAXIMOS = 250
+
 # Reloj
 clock = pygame.time.Clock()
-
+# Wilkins Ismael Gervacio Carpio 23-EISN-2-036
 # Distancia mínima para que los enemigos disparen
 DISTANCIA_MINIMA_ATACAR = 200
 
-# Wilkins Ismael Gervacio Carpio 23-EISN-2-036
 # Pantallas
 def pantalla_inicio():
-    screen.fill((0, 0, 0))  # Pantalla negra
+    screen.fill((0, 0, 0))  
     texto = font.render("Presiona ENTER para empezar", True, (255, 255, 255))
     screen.blit(texto, (ANCHO // 2 - texto.get_width() // 2, ALTO // 2 - 25))
     pygame.display.flip()
-
+# Wilkins Ismael Gervacio Carpio 23-EISN-2-036
 def pantalla_perder():
-    screen.fill((255, 0, 0))  # Pantalla roja
+    screen.fill((255, 0, 0))  
     texto = font.render("Presiona ENTER para reintentar", True, (0, 0, 0))
     screen.blit(texto, (ANCHO // 2 - texto.get_width() // 2, ALTO // 2 - 25))
     pygame.display.flip()
@@ -69,11 +70,27 @@ def pantalla_perder():
             if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
                 reiniciar_juego()
                 esperando = False
-
+# Wilkins Ismael Gervacio Carpio 23-EISN-2-036
+def pantalla_victoria():
+    screen.fill((0, 255, 0))  
+    texto = font.render("¡Ganaste! Presiona ENTER para jugar de nuevo", True, (0, 0, 0))
+    screen.blit(texto, (ANCHO // 2 - texto.get_width() // 2, ALTO // 2 - 25))
+    pygame.display.flip()
+    pygame.time.delay(1000)
+    
+    esperando = True
+    while esperando:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
+                reiniciar_juego()
+                esperando = False
 # Wilkins Ismael Gervacio Carpio 23-EISN-2-036
 # Estado del juego
 def reiniciar_juego():
-    global jugador_x, jugador_y, jugador_cooldown, enemigos, disparos, disparos_enemigos, explosiones, temporizador_spawn, en_juego
+    global jugador_x, jugador_y, jugador_cooldown, enemigos, disparos, disparos_enemigos, explosiones, temporizador_spawn, puntos, en_juego
     jugador_x = ANCHO // 2 - jugador_tamaño // 2
     jugador_y = ALTO - 80
     jugador_cooldown = 0
@@ -82,11 +99,11 @@ def reiniciar_juego():
     disparos_enemigos = []
     explosiones = []
     temporizador_spawn = 0
+    puntos = 0
     en_juego = True
 
 running = True
 en_juego = False
-
 # Wilkins Ismael Gervacio Carpio 23-EISN-2-036
 while running:
     if not en_juego:
@@ -96,9 +113,12 @@ while running:
                 running = False
             if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
                 reiniciar_juego()
-
+# Wilkins Ismael Gervacio Carpio 23-EISN-2-036
     else:
-        screen.fill((0, 0, 0))  # Fondo negro
+        if puntos >= PUNTOS_MAXIMOS:
+            pantalla_victoria()
+
+        screen.fill((0, 0, 0))  
 # Wilkins Ismael Gervacio Carpio 23-EISN-2-036
         # Manejo de eventos
         for event in pygame.event.get():
@@ -125,37 +145,35 @@ while running:
             enemigos.append([random.randint(0, ANCHO - enemigo_tamaño), 0, 0])
             temporizador_spawn = 0
 # Wilkins Ismael Gervacio Carpio 23-EISN-2-036
-        for enemy in enemigos[:]:
-            enemy[1] += enemigo_velocidad
-            enemy[2] += 1
+        for enemigo in enemigos[:]:
+            enemigo[1] += enemigo_velocidad
+            enemigo[2] += 1
 
-            # Dibujar enemigo (rectángulo blanco)
-            pygame.draw.rect(screen, (255, 255, 255), (enemy[0], enemy[1], enemigo_tamaño, enemigo_tamaño))
+            pygame.draw.rect(screen, (255, 255, 255), (enemigo[0], enemigo[1], enemigo_tamaño, enemigo_tamaño))
 # Wilkins Ismael Gervacio Carpio 23-EISN-2-036
-            # Calcular la distancia entre el enemigo y el jugador
-            distance = math.sqrt((enemy[0] - jugador_x) ** 2 + (enemy[1] - jugador_y) ** 2)
+            distance = math.sqrt((enemigo[0] - jugador_x) ** 2 + (enemigo[1] - jugador_y) ** 2)
 
-            # Solo disparan en la parte inferior
-            if enemy[2] >= TIEMPO_DISPARO_ENEMIGO and distance < DISTANCIA_MINIMA_ATACAR:
-                direccion_x = jugador_x + jugador_tamaño // 2 - (enemy[0] + enemigo_tamaño // 2)
-                direccion_y = jugador_y - enemy[1]
+            if enemigo[2] >= TIEMPO_DISPARO_ENEMIGO and distance < DISTANCIA_MINIMA_ATACAR:
+                direccion_x = jugador_x + jugador_tamaño // 2 - (enemigo[0] + enemigo_tamaño // 2)
+                direccion_y = jugador_y - enemigo[1]
                 length = math.sqrt(direccion_x ** 2 + direccion_y ** 2)
                 if length != 0:
                     direccion_x /= length
                     direccion_y /= length
-                disparos_enemigos.append([enemy[0] + enemigo_tamaño // 2, enemy[1], direccion_x * velocidad_disparo_enemigo, direccion_y * velocidad_disparo_enemigo])
-                enemy[2] = 0
+                disparos_enemigos.append([enemigo[0] + enemigo_tamaño // 2, enemigo[1], direccion_x * velocidad_disparo_enemigo, direccion_y * velocidad_disparo_enemigo])
+                enemigo[2] = 0
 # Wilkins Ismael Gervacio Carpio 23-EISN-2-036
         # Mover balas del jugador
         for disparo in disparos[:]:
             disparo[1] += velocidad_disparo
             if disparo[1] < 0:
                 disparos.remove(disparo)
-            for enemy in enemigos[:]:
-                if enemy[0] < disparo[0] < enemy[0] + enemigo_tamaño and enemy[1] < disparo[1] < enemy[1] + enemigo_tamaño:
-                    explosiones.append([enemy[0], enemy[1], 30])
-                    enemigos.remove(enemy)
+            for enemigo in enemigos[:]:
+                if enemigo[0] < disparo[0] < enemigo[0] + enemigo_tamaño and enemigo[1] < disparo[1] < enemigo[1] + enemigo_tamaño:
+                    explosiones.append([enemigo[0], enemigo[1], 30])
+                    enemigos.remove(enemigo)
                     disparos.remove(disparo)
+                    puntos += 10
                     break
 
         # Mover balas de los enemigos
@@ -167,12 +185,13 @@ while running:
             elif jugador_x < disparo_enemigo[0] < jugador_x + jugador_tamaño and jugador_y < disparo_enemigo[1] < jugador_y + jugador_tamaño:
                 pantalla_perder()
 # Wilkins Ismael Gervacio Carpio 23-EISN-2-036
-        # Dibujar jugador (rectángulo azul)
+        # Dibujar jugador
         pygame.draw.rect(screen, (0, 0, 255), (jugador_x, jugador_y, jugador_tamaño, jugador_tamaño))
 
         # Dibujar balas del jugador (líneas rojas)
         for disparo in disparos:
             pygame.draw.rect(screen, (255, 0, 0), (disparo[0], disparo[1], 5, 10))
+
 # Wilkins Ismael Gervacio Carpio 23-EISN-2-036
         # Dibujar balas de los enemigos (líneas amarillas)
         for disparo_enemigo in disparos_enemigos:
@@ -185,6 +204,10 @@ while running:
             if explosion[2] <= 0:
                 explosiones.remove(explosion)
 # Wilkins Ismael Gervacio Carpio 23-EISN-2-036
+        # Mostrar puntos
+        texto_puntos = font.render(f"Puntos: {puntos}", True, (255, 255, 255))
+        screen.blit(texto_puntos, (10, 10))
+
         pygame.display.flip()
         clock.tick(60)
 
