@@ -26,9 +26,10 @@ jugador_cooldown_max = 20
 enemigos = []
 enemigo_tamaño = 40
 enemigo_velocidad = 2
+enemigo_velocidad_especial = 4  # Velocidad del enemigo especial
+probabilidad_especial = 0.1  # 10% de probabilidad de que un enemigo sea especial
 temporizador_spawn = 0
 SPAWN_TIEMPO = 90
-disparos_enemigos = []
 velocidad_disparo_enemigo = 4
 TIEMPO_DISPARO_ENEMIGO = 90
 
@@ -37,9 +38,10 @@ disparos = []
 velocidad_disparo = -7
 explosiones = []
 # Wilkins Ismael Gervacio Carpio 23-EISN-2-036
-# Puntuación
+# Puntuación y vidas
 puntos = 0
 PUNTOS_MAXIMOS = 250
+vidas = 3
 
 # Reloj
 clock = pygame.time.Clock()
@@ -56,7 +58,7 @@ def pantalla_inicio():
 # Wilkins Ismael Gervacio Carpio 23-EISN-2-036
 def pantalla_perder():
     screen.fill((255, 0, 0))  
-    texto = font.render("Presiona ENTER para reintentar", True, (0, 0, 0))
+    texto = font.render(f"¡Perdiste! Puntos: {puntos}", True, (0, 0, 0))
     screen.blit(texto, (ANCHO // 2 - texto.get_width() // 2, ALTO // 2 - 25))
     pygame.display.flip()
     pygame.time.delay(1000)
@@ -90,7 +92,7 @@ def pantalla_victoria():
 # Wilkins Ismael Gervacio Carpio 23-EISN-2-036
 # Estado del juego
 def reiniciar_juego():
-    global jugador_x, jugador_y, jugador_cooldown, enemigos, disparos, disparos_enemigos, explosiones, temporizador_spawn, puntos, en_juego
+    global jugador_x, jugador_y, jugador_cooldown, enemigos, disparos, disparos_enemigos, explosiones, temporizador_spawn, puntos, vidas, en_juego
     jugador_x = ANCHO // 2 - jugador_tamaño // 2
     jugador_y = ALTO - 80
     jugador_cooldown = 0
@@ -100,6 +102,7 @@ def reiniciar_juego():
     explosiones = []
     temporizador_spawn = 0
     puntos = 0
+    vidas = 3
     en_juego = True
 
 running = True
@@ -142,15 +145,24 @@ while running:
         # Mover enemigos
         temporizador_spawn += 1
         if temporizador_spawn >= SPAWN_TIEMPO:
-            enemigos.append([random.randint(0, ANCHO - enemigo_tamaño), 0, 0])
+            # Decidir si el enemigo es especial (probabilidad de 5%)
+            if random.random() < probabilidad_especial:
+                enemigos.append([random.randint(0, ANCHO - enemigo_tamaño), 0, 0, True])  # True indica que es especial
+            else:
+                enemigos.append([random.randint(0, ANCHO - enemigo_tamaño), 0, 0, False])  # False indica que es normal
             temporizador_spawn = 0
 # Wilkins Ismael Gervacio Carpio 23-EISN-2-036
         for enemigo in enemigos[:]:
-            enemigo[1] += enemigo_velocidad
+            enemigo[1] += enemigo_velocidad if not enemigo[3] else enemigo_velocidad_especial  # Velocidad especial si es el enemigo morado
             enemigo[2] += 1
+        # Dibujar enemigos (en color morado si es especial)
+            if enemigo[3]:  # Si es el enemigo especial
+                pygame.draw.rect(screen, (128, 0, 128), (enemigo[0], enemigo[1], enemigo_tamaño, enemigo_tamaño))  # Morado
+            else:
+                pygame.draw.rect(screen, (255, 255, 255), (enemigo[0], enemigo[1], enemigo_tamaño, enemigo_tamaño))  # Blanco para los enemigos normales
 
-            pygame.draw.rect(screen, (255, 255, 255), (enemigo[0], enemigo[1], enemigo_tamaño, enemigo_tamaño))
 # Wilkins Ismael Gervacio Carpio 23-EISN-2-036
+    # Verificar colisiones con disparos
             distance = math.sqrt((enemigo[0] - jugador_x) ** 2 + (enemigo[1] - jugador_y) ** 2)
 
             if enemigo[2] >= TIEMPO_DISPARO_ENEMIGO and distance < DISTANCIA_MINIMA_ATACAR:
@@ -173,7 +185,10 @@ while running:
                     explosiones.append([enemigo[0], enemigo[1], 30])
                     enemigos.remove(enemigo)
                     disparos.remove(disparo)
-                    puntos += 10
+                    if enemigo[3]:  # Si el enemigo es especial
+                        puntos += 50  # 50 puntos por el enemigo morado
+                    else:
+                        puntos += 10  # 10 puntos por los enemigos normales
                     break
 
         # Mover balas de los enemigos
@@ -183,7 +198,10 @@ while running:
             if disparo_enemigo[1] > ALTO or disparo_enemigo[0] < 0 or disparo_enemigo[0] > ANCHO:
                 disparos_enemigos.remove(disparo_enemigo)
             elif jugador_x < disparo_enemigo[0] < jugador_x + jugador_tamaño and jugador_y < disparo_enemigo[1] < jugador_y + jugador_tamaño:
-                pantalla_perder()
+                vidas -= 1  # Restar una vida
+                disparos_enemigos.remove(disparo_enemigo)
+                if vidas <= 0:
+                    pantalla_perder()
 # Wilkins Ismael Gervacio Carpio 23-EISN-2-036
         # Dibujar jugador
         pygame.draw.rect(screen, (0, 0, 255), (jugador_x, jugador_y, jugador_tamaño, jugador_tamaño))
@@ -204,6 +222,10 @@ while running:
             if explosion[2] <= 0:
                 explosiones.remove(explosion)
 # Wilkins Ismael Gervacio Carpio 23-EISN-2-036
+        # Dibujar las vidas en la esquina superior derecha
+        for i in range(vidas):
+            pygame.draw.rect(screen, (255, 105, 180), (ANCHO - 40 * (i + 1), 10, 30, 30))  # Cuadros rosas
+
         # Mostrar puntos
         texto_puntos = font.render(f"Puntos: {puntos}", True, (255, 255, 255))
         screen.blit(texto_puntos, (10, 10))
