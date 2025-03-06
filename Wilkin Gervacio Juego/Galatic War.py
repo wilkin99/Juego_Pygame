@@ -6,61 +6,80 @@ import heapq
 
 # Inicialización de Pygame
 pygame.init()
-
+# Wilkins Ismael Gervacio Carpio 23-EISN-2-036
 # Configuración de pantalla
 ANCHO, ALTO = 800, 800
 screen = pygame.display.set_mode((ANCHO, ALTO))
 pygame.display.set_caption("Galactic War")
+
+# Cargar imágenes
+fondo_imagen = pygame.image.load("Imágenes/fondo.png")
+jugador_imagen = pygame.image.load("Imágenes/nave.png")
+vida_imagen = pygame.image.load("Imágenes/vida.png")
+enemigo_1 = pygame.image.load("Imágenes/alien 1.png")
+enemigo_2 = pygame.image.load("Imágenes/alien 2.png")
+disparo_jugador_imagen = pygame.image.load("Imágenes/disparo jugador.png")
+disparo_enemigo_imagen = pygame.image.load("Imágenes/disparo enemigo.png")
+explosion_img = pygame.image.load("Imágenes/explosion.png")
+pantalla_inicio_img = pygame.image.load("Imágenes/pantalla inicio.png")
+pantalla_perder_img = pygame.image.load("Imágenes/pantalla muerte.png")
+pantalla_ganar_img = pygame.image.load("Imágenes/pantalla victoria.png")
 # Wilkins Ismael Gervacio Carpio 23-EISN-2-036
+# Cargar sonidos
+disparo_jugador_sonido = pygame.mixer.Sound("Audio/jugador disparo.mp3")
+disparo_enemigo_sonido = pygame.mixer.Sound("Audio/enemigo disparo.mp3")
+explosion_sonido = pygame.mixer.Sound("Audio/explosion enemigo.mp3")
+pygame.mixer.music.load("Audio/musica.mp3")
+pygame.mixer.music.set_volume(1)
+
 # Fuente para los textos
 font = pygame.font.Font(None, 50)
-
+# Wilkins Ismael Gervacio Carpio 23-EISN-2-036
 # Configuración del jugador
-jugador_tamaño = 50
-jugador_x = ANCHO // 2 - jugador_tamaño // 2
-jugador_y = ALTO - 80
+jugador_rect = jugador_imagen.get_rect()
+jugador_tamaño = jugador_rect.width, jugador_rect.height
+jugador_rect.centerx = ANCHO // 2
+jugador_rect.bottom = ALTO - 80
 jugador_velocidad = 7
 jugador_cooldown = 0
 jugador_cooldown_max = 20
-# Wilkins Ismael Gervacio Carpio 23-EISN-2-036
+
 # Configuración de enemigos
 enemigos = []
-enemigo_tamaño = 40
-enemigo_velocidad = 3
-enemigo_velocidad_especial = 5
+enemigo_1_rect = enemigo_1.get_rect()
+enemigo_2_rect = enemigo_2.get_rect()
+enemigo_tamaño = enemigo_1_rect.width, enemigo_1_rect.height
+enemigo_velocidad = 4
+enemigo_velocidad_especial = 6
 probabilidad_especial = 0.1  # 10% de probabilidad de que un enemigo sea especial
 temporizador_spawn = 0
 SPAWN_TIEMPO = 75
-velocidad_disparo_enemigo = 6
-TIEMPO_DISPARO_ENEMIGO = 90
-
+velocidad_disparo_enemigo = 8
+TIEMPO_DISPARO_ENEMIGO = 60
+# Wilkins Ismael Gervacio Carpio 23-EISN-2-036
 # Proyectiles
 disparos = []
 velocidad_disparo = -7
 explosiones = []
-# Wilkins Ismael Gervacio Carpio 23-EISN-2-036
+
 # Puntuación y vidas
 puntos = 0
-PUNTOS_MAXIMOS = 250
+PUNTOS_MAXIMOS = 500
 vidas = 3
-
+# Wilkins Ismael Gervacio Carpio 23-EISN-2-036
 # Reloj
 clock = pygame.time.Clock()
-# Wilkins Ismael Gervacio Carpio 23-EISN-2-036
+
 # Distancia mínima para que los enemigos disparen
 DISTANCIA_MINIMA_ATACAR = 800
-
+# Wilkins Ismael Gervacio Carpio 23-EISN-2-036
 # Pantallas
 def pantalla_inicio():
-    screen.fill((0, 0, 0))  
-    texto = font.render("Presiona ENTER para empezar", True, (255, 255, 255))
-    screen.blit(texto, (ANCHO // 2 - texto.get_width() // 2, ALTO // 2 - 25))
+    screen.blit(pantalla_inicio_img, (0, 0))
     pygame.display.flip()
-# Wilkins Ismael Gervacio Carpio 23-EISN-2-036
+
 def pantalla_perder():
-    screen.fill((255, 0, 0))  
-    texto = font.render(f"¡Perdiste! Puntos: {puntos}", True, (0, 0, 0))
-    screen.blit(texto, (ANCHO // 2 - texto.get_width() // 2, ALTO // 2 - 25))
+    screen.blit(pantalla_perder_img, (0, 0))
     pygame.display.flip()
     pygame.time.delay(1000)
     
@@ -75,9 +94,7 @@ def pantalla_perder():
                 esperando = False
 # Wilkins Ismael Gervacio Carpio 23-EISN-2-036
 def pantalla_victoria():
-    screen.fill((0, 255, 0))  
-    texto = font.render("¡Ganaste! Presiona ENTER para jugar de nuevo", True, (0, 0, 0))
-    screen.blit(texto, (ANCHO // 2 - texto.get_width() // 2, ALTO // 2 - 25))
+    screen.blit(pantalla_ganar_img, (0, 0))
     pygame.display.flip()
     pygame.time.delay(1000)
     
@@ -90,12 +107,12 @@ def pantalla_victoria():
             if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
                 reiniciar_juego()
                 esperando = False
-# Wilkins Ismael Gervacio Carpio 23-EISN-2-036
+
 # Estado del juego
 def reiniciar_juego():
-    global jugador_x, jugador_y, jugador_cooldown, enemigos, disparos, disparos_enemigos, explosiones, temporizador_spawn, puntos, vidas, en_juego
-    jugador_x = ANCHO // 2 - jugador_tamaño // 2
-    jugador_y = ALTO - 80
+    global jugador_rect, jugador_cooldown, enemigos, disparos, disparos_enemigos, explosiones, temporizador_spawn, puntos, vidas, en_juego
+    jugador_rect.centerx = ANCHO // 2
+    jugador_rect.bottom = ALTO - 80
     jugador_cooldown = 0
     enemigos = []
     disparos = []
@@ -105,10 +122,10 @@ def reiniciar_juego():
     puntos = 0
     vidas = 3
     en_juego = True
-
+# Wilkins Ismael Gervacio Carpio 23-EISN-2-036
 running = True
 en_juego = False
-# Wilkins Ismael Gervacio Carpio 23-EISN-2-036
+
 # Configuración del grid para A*
 GRID_ANCHO = ANCHO // 20
 GRID_ALTO = ALTO // 20
@@ -117,7 +134,7 @@ grid = [[0 for _ in range(GRID_ANCHO)] for _ in range(GRID_ALTO)]
 # Función para calcular la heurística (distancia euclidiana)
 def heuristic(a, b):
     return math.sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2)
-
+# Wilkins Ismael Gervacio Carpio 23-EISN-2-036
 # Algoritmo A* para calcular la ruta óptima
 def Astar(inicio, objetivo, grid):
     frontera = []
@@ -160,6 +177,9 @@ def get_vecinos(pos, grid):
             vecinos.append((x, y))
     return vecinos
 
+# Reproducir música de fondo
+pygame.mixer.music.play(-1)
+# Wilkins Ismael Gervacio Carpio 23-EISN-2-036
 while running:
     if not en_juego:
         pantalla_inicio()
@@ -172,7 +192,8 @@ while running:
         if puntos >= PUNTOS_MAXIMOS:
             pantalla_victoria()
 
-        screen.fill((0, 0, 0))  
+        # Dibujar fondo
+        screen.blit(fondo_imagen, (0, 0))
 
         # Manejo de eventos
         for event in pygame.event.get():
@@ -181,49 +202,51 @@ while running:
 
         # Controles del jugador
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_LEFT] and jugador_x > 0:
-            jugador_x -= jugador_velocidad
-        if keys[pygame.K_RIGHT] and jugador_x < ANCHO - jugador_tamaño:
-            jugador_x += jugador_velocidad
+        if keys[pygame.K_LEFT] and jugador_rect.left > 0:
+            jugador_rect.x -= jugador_velocidad
+        if keys[pygame.K_RIGHT] and jugador_rect.right < ANCHO:
+            jugador_rect.x += jugador_velocidad
         if keys[pygame.K_SPACE] and jugador_cooldown == 0:
-            disparos.append([jugador_x + jugador_tamaño // 2, jugador_y])
+            disparos.append([jugador_rect.centerx, jugador_rect.top])  # Disparar desde el centro del jugador
+            disparo_jugador_sonido.play()
             jugador_cooldown = jugador_cooldown_max
 
         # Reducir cooldown del jugador
         if jugador_cooldown > 0:
             jugador_cooldown -= 1
-
+# Wilkins Ismael Gervacio Carpio 23-EISN-2-036
         # Mover enemigos
         temporizador_spawn += 1
         if temporizador_spawn >= SPAWN_TIEMPO:
             # Decidir si el enemigo es especial (probabilidad de 5%)
             if random.random() < probabilidad_especial:
-                enemigos.append([random.randint(0, ANCHO - enemigo_tamaño), 0, 0, True])  # True indica que es especial
+                enemigos.append([random.randint(0, ANCHO - enemigo_tamaño[0]), 0, 0, True])  # True indica que es especial
             else:
-                enemigos.append([random.randint(0, ANCHO - enemigo_tamaño), 0, 0, False])  # False indica que es normal
+                enemigos.append([random.randint(0, ANCHO - enemigo_tamaño[0]), 0, 0, False])  # False indica que es normal
             temporizador_spawn = 0
 
         for enemigo in enemigos[:]:
             enemigo[1] += enemigo_velocidad if not enemigo[3] else enemigo_velocidad_especial  # Velocidad especial si es el enemigo morado
             enemigo[2] += 1
 
-            # Dibujar enemigos (en color morado si es especial)
+            # Dibujar enemigos
             if enemigo[3]:  # Si es el enemigo especial
-                pygame.draw.rect(screen, (128, 0, 128), (enemigo[0], enemigo[1], enemigo_tamaño, enemigo_tamaño))  # Morado
+                screen.blit(enemigo_2, (enemigo[0], enemigo[1]))
             else:
-                pygame.draw.rect(screen, (255, 255, 255), (enemigo[0], enemigo[1], enemigo_tamaño, enemigo_tamaño))  # Blanco para los enemigos normales
-
+                screen.blit(enemigo_1, (enemigo[0], enemigo[1]))
+# Wilkins Ismael Gervacio Carpio 23-EISN-2-036
             # Verificar si el enemigo está cerca del jugador y puede disparar
-            distance = math.sqrt((enemigo[0] - jugador_x) ** 2 + (enemigo[1] - jugador_y) ** 2)
+            distance = math.sqrt((enemigo[0] - jugador_rect.centerx) ** 2 + (enemigo[1] - jugador_rect.centery) ** 2)
             if distance < DISTANCIA_MINIMA_ATACAR and enemigo[2] >= TIEMPO_DISPARO_ENEMIGO:
                 # Calcular la dirección del disparo hacia el jugador
-                direccion_x = jugador_x - enemigo[0]
-                direccion_y = jugador_y - enemigo[1]
+                direccion_x = jugador_rect.centerx - enemigo[0]
+                direccion_y = jugador_rect.centery - enemigo[1]
                 length = math.sqrt(direccion_x ** 2 + direccion_y ** 2)
                 if length != 0:
                     direccion_x /= length
                     direccion_y /= length
-                disparos_enemigos.append([enemigo[0] + enemigo_tamaño // 2, enemigo[1], direccion_x * velocidad_disparo_enemigo, direccion_y * velocidad_disparo_enemigo])
+                disparos_enemigos.append([enemigo[0] + enemigo_tamaño[0] // 2, enemigo[1], direccion_x * velocidad_disparo_enemigo, direccion_y * velocidad_disparo_enemigo])
+                disparo_enemigo_sonido.play()
                 enemigo[2] = 0  # Reiniciar el temporizador de disparo
 
         # Mover balas del jugador
@@ -232,50 +255,51 @@ while running:
             if disparo[1] < 0:
                 disparos.remove(disparo)
             for enemigo in enemigos[:]:
-                if enemigo[0] < disparo[0] < enemigo[0] + enemigo_tamaño and enemigo[1] < disparo[1] < enemigo[1] + enemigo_tamaño:
+                if enemigo[0] < disparo[0] < enemigo[0] + enemigo_tamaño[0] and enemigo[1] < disparo[1] < enemigo[1] + enemigo_tamaño[1]:
                     explosiones.append([enemigo[0], enemigo[1], 30])
                     enemigos.remove(enemigo)
                     disparos.remove(disparo)
+                    explosion_sonido.play()
                     if enemigo[3]:  # Si el enemigo es especial
                         puntos += 50  # 50 puntos por el enemigo morado
                     else:
                         puntos += 10  # 10 puntos por los enemigos normales
                     break
-
+# Wilkins Ismael Gervacio Carpio 23-EISN-2-036
         # Mover balas de los enemigos
         for disparo_enemigo in disparos_enemigos[:]:
             disparo_enemigo[0] += disparo_enemigo[2]
             disparo_enemigo[1] += disparo_enemigo[3]
             if disparo_enemigo[1] > ALTO or disparo_enemigo[0] < 0 or disparo_enemigo[0] > ANCHO:
                 disparos_enemigos.remove(disparo_enemigo)
-            elif jugador_x < disparo_enemigo[0] < jugador_x + jugador_tamaño and jugador_y < disparo_enemigo[1] < jugador_y + jugador_tamaño:
+            elif jugador_rect.collidepoint(disparo_enemigo[0], disparo_enemigo[1]):
                 vidas -= 1  # Restar una vida
                 disparos_enemigos.remove(disparo_enemigo)
                 if vidas <= 0:
                     pantalla_perder()
 
         # Dibujar jugador
-        pygame.draw.rect(screen, (0, 0, 255), (jugador_x, jugador_y, jugador_tamaño, jugador_tamaño))
-
-        # Dibujar balas del jugador (líneas rojas)
+        screen.blit(jugador_imagen, jugador_rect.topleft)
+# Wilkins Ismael Gervacio Carpio 23-EISN-2-036
+        # Dibujar balas del jugador
         for disparo in disparos:
-            pygame.draw.rect(screen, (255, 0, 0), (disparo[0], disparo[1], 5, 10))
+            screen.blit(disparo_jugador_imagen, (disparo[0], disparo[1]))
 
-        # Dibujar balas de los enemigos (líneas amarillas)
+        # Dibujar balas de los enemigos
         for disparo_enemigo in disparos_enemigos:
-            pygame.draw.rect(screen, (255, 255, 0), (disparo_enemigo[0], disparo_enemigo[1], 10, 10))
-
-        # Dibujar explosiones (círculos naranjas)
+            screen.blit(disparo_enemigo_imagen, (disparo_enemigo[0], disparo_enemigo[1]))
+# Wilkins Ismael Gervacio Carpio 23-EISN-2-036
+        # Dibujar explosiones
         for explosion in explosiones[:]:
-            pygame.draw.circle(screen, (255, 165, 0), (explosion[0] + enemigo_tamaño // 2, explosion[1] + enemigo_tamaño // 2), 20)
+            screen.blit(explosion_img, (explosion[0], explosion[1]))
             explosion[2] -= 1
             if explosion[2] <= 0:
                 explosiones.remove(explosion)
 
         # Dibujar las vidas en la esquina superior derecha
         for i in range(vidas):
-            pygame.draw.rect(screen, (255, 105, 180), (ANCHO - 40 * (i + 1), 10, 30, 30))  # Cuadros rosas
-
+            screen.blit(vida_imagen, (ANCHO - 40 * (i + 1), 10))
+# Wilkins Ismael Gervacio Carpio 23-EISN-2-036
         # Mostrar puntos
         texto_puntos = font.render(f"Puntos: {puntos}", True, (255, 255, 255))
         screen.blit(texto_puntos, (10, 10))
@@ -284,3 +308,4 @@ while running:
         clock.tick(60)
 
 pygame.quit()
+# Wilkins Ismael Gervacio Carpio 23-EISN-2-036
