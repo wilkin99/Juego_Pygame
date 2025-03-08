@@ -6,6 +6,10 @@ import heapq
 
 # Inicialización de Pygame
 pygame.init()
+
+# Inicializar el módulo de joystick
+pygame.joystick.init()
+
 # Wilkins Ismael Gervacio Carpio 23-EISN-2-036
 # Configuración de pantalla
 ANCHO, ALTO = 800, 800
@@ -35,6 +39,14 @@ pygame.mixer.music.set_volume(1)
 # Fuente para los textos
 font = pygame.font.Font(None, 50)
 # Wilkins Ismael Gervacio Carpio 23-EISN-2-036
+
+# Detectar y conectar un joystick si hay uno disponible
+if pygame.joystick.get_count() > 0:
+    mando = pygame.joystick.Joystick(0)  # Usar el primer joystick detectado
+    mando.init()
+else:
+    mando = None  # No hay joystick conectado
+
 # Configuración del jugador
 jugador_rect = jugador_imagen.get_rect()
 jugador_tamaño = jugador_rect.width, jugador_rect.height
@@ -49,13 +61,13 @@ enemigos = []
 enemigo_1_rect = enemigo_1.get_rect()
 enemigo_2_rect = enemigo_2.get_rect()
 enemigo_tamaño = enemigo_1_rect.width, enemigo_1_rect.height
-enemigo_velocidad = 4
-enemigo_velocidad_especial = 6
+enemigo_velocidad = 3
+enemigo_velocidad_especial = 5
 probabilidad_especial = 0.1  # 10% de probabilidad de que un enemigo sea especial
 temporizador_spawn = 0
 SPAWN_TIEMPO = 75
 velocidad_disparo_enemigo = 8
-TIEMPO_DISPARO_ENEMIGO = 60
+TIEMPO_DISPARO_ENEMIGO = 120
 # Wilkins Ismael Gervacio Carpio 23-EISN-2-036
 # Proyectiles
 disparos = []
@@ -92,6 +104,10 @@ def pantalla_perder():
             if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
                 reiniciar_juego()
                 esperando = False
+        if mando and mando.get_button(9):
+            reiniciar_juego()
+            esperando = False
+
 # Wilkins Ismael Gervacio Carpio 23-EISN-2-036
 def pantalla_victoria():
     screen.blit(pantalla_ganar_img, (0, 0))
@@ -107,6 +123,9 @@ def pantalla_victoria():
             if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
                 reiniciar_juego()
                 esperando = False
+        if mando and mando.get_button(9):
+            reiniciar_juego()
+            esperando = False
 
 # Estado del juego
 def reiniciar_juego():
@@ -177,9 +196,88 @@ def get_vecinos(pos, grid):
             vecinos.append((x, y))
     return vecinos
 
+# Árbol de comportamiento
+class ArbolComportamiento:
+    def __init__(self, root_node):
+        self.root_node = root_node
+
+    def run(self):
+        return self.root_node.execute()
+
+class Node:
+    def execute(self):
+        raise NotImplementedError
+
+class Sequence(Node):
+    def __init__(self, nodes):
+        self.nodes = nodes
+
+    def execute(self):
+        for node in self.nodes:
+            if not node.execute():
+                return False
+        return True
+
+class Action(Node):
+    def __init__(self, action_func):
+        self.action_func = action_func
+
+    def execute(self):
+        return self.action_func()
+
+class EliminarSiFueraDePantalla(Node):
+    def __init__(self, enemigo):
+        self.enemigo = enemigo
+
+    def execute(self):
+        if self.enemigo[1] > ALTO:  # Si el enemigo está fuera de la pantalla
+            enemigos.remove(self.enemigo)
+            return False  # Indicar que el enemigo fue eliminado
+        return True  # El enemigo sigue en la pantalla
+
+def crear_arbol_comportamiento(enemigo, jugador_rect):
+    accion_mover = Action(lambda: mover_hacia_abajo(enemigo))
+    accion_disparar = Action(lambda: disparar_hacia_jugador(enemigo, jugador_rect))
+    accion_eliminar = EliminarSiFueraDePantalla(enemigo)
+
+    # Secuencia: eliminar si está fuera de la pantalla, mover hacia abajo y luego disparar
+    secuencia = Sequence([accion_eliminar, accion_mover, accion_disparar])
+
+    return ArbolComportamiento(secuencia)
+
+def mover_hacia_abajo(enemigo):
+    enemigo[1] += enemigo_velocidad if not enemigo[3] else enemigo_velocidad_especial
+    return True
+
+def disparar_hacia_jugador(enemigo, jugador_rect):
+    # Verificar si el enemigo puede disparar
+    if enemigo[2] >= TIEMPO_DISPARO_ENEMIGO:
+        # Calcular la dirección del disparo hacia el jugador
+        direccion_x = jugador_rect.centerx - enemigo[0]
+        direccion_y = jugador_rect.centery - enemigo[1]
+        length = math.sqrt(direccion_x ** 2 + direccion_y ** 2)
+        if length != 0:
+            direccion_x /= length
+            direccion_y /= length
+        disparos_enemigos.append([enemigo[0] + enemigo_tamaño[0] // 2, enemigo[1], direccion_x * velocidad_disparo_enemigo, direccion_y * velocidad_disparo_enemigo])
+        disparo_enemigo_sonido.play()
+        enemigo[2] = 0  # Reiniciar el temporizador de disparo
+
+def calcular_direccion_disparo(enemigo, jugador_rect):
+    inicio = (enemigo[0] // 20, enemigo[1] // 20)  # Posición del enemigo en el grid
+    objetivo = (jugador_rect.centerx // 20, jugador_rect.centery // 20)  # Posición del jugador en el grid
+    camino = Astar(inicio, objetivo, grid)
+    if camino:
+        # Calcular la dirección hacia el primer paso del camino
+        dx = camino[0][0] - inicio[0]
+        dy = camino[0][1] - inicio[1]
+        return dx, dy
+    return 0, 1  # Si no hay camino, disparar en línea recta hacia abajo
+
 # Reproducir música de fondo
 pygame.mixer.music.play(-1)
 # Wilkins Ismael Gervacio Carpio 23-EISN-2-036
+# Búcle principal
 while running:
     if not en_juego:
         pantalla_inicio()
@@ -187,6 +285,8 @@ while running:
             if event.type == pygame.QUIT:
                 running = False
             if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
+                reiniciar_juego()
+            if mando and mando.get_button(9):  # Botón Start para iniciar
                 reiniciar_juego()
     else:
         if puntos >= PUNTOS_MAXIMOS:
@@ -201,15 +301,28 @@ while running:
                 running = False
 
         # Controles del jugador
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_LEFT] and jugador_rect.left > 0:
-            jugador_rect.x -= jugador_velocidad
-        if keys[pygame.K_RIGHT] and jugador_rect.right < ANCHO:
-            jugador_rect.x += jugador_velocidad
-        if keys[pygame.K_SPACE] and jugador_cooldown == 0:
-            disparos.append([jugador_rect.centerx, jugador_rect.top])  # Disparar desde el centro del jugador
-            disparo_jugador_sonido.play()
-            jugador_cooldown = jugador_cooldown_max
+        if mando:
+            eje_x = mando.get_axis(0)  # Eje izquierdo horizontal
+            if eje_x < -0.3 and jugador_rect.left > 0:  # Mover a la izquierda
+                jugador_rect.x -= jugador_velocidad
+            if eje_x > 0.3 and jugador_rect.right < ANCHO:  # Mover a la derecha
+                jugador_rect.x += jugador_velocidad
+
+            if mando.get_button(0) and jugador_cooldown == 0:  # Botón A / X para disparar
+                disparos.append([jugador_rect.centerx, jugador_rect.top])
+                disparo_jugador_sonido.play()
+                jugador_cooldown = jugador_cooldown_max
+        else:
+            # Controles normales con teclado
+            keys = pygame.key.get_pressed()
+            if keys[pygame.K_LEFT] and jugador_rect.left > 0:
+                jugador_rect.x -= jugador_velocidad
+            if keys[pygame.K_RIGHT] and jugador_rect.right < ANCHO:
+                jugador_rect.x += jugador_velocidad
+            if keys[pygame.K_SPACE] and jugador_cooldown == 0:
+                disparos.append([jugador_rect.centerx, jugador_rect.top])
+                disparo_jugador_sonido.play()
+                jugador_cooldown = jugador_cooldown_max
 
         # Reducir cooldown del jugador
         if jugador_cooldown > 0:
@@ -218,22 +331,39 @@ while running:
         # Mover enemigos
         temporizador_spawn += 1
         if temporizador_spawn >= SPAWN_TIEMPO:
-            # Decidir si el enemigo es especial (probabilidad de 5%)
+            # Decidir si el enemigo es especial (probabilidad de 10%)
             if random.random() < probabilidad_especial:
-                enemigos.append([random.randint(0, ANCHO - enemigo_tamaño[0]), 0, 0, True])  # True indica que es especial
+                enemigos.append([random.randint(0, ANCHO - enemigo_tamaño[0]), 0, TIEMPO_DISPARO_ENEMIGO, True])  # True indica que es especial
             else:
-                enemigos.append([random.randint(0, ANCHO - enemigo_tamaño[0]), 0, 0, False])  # False indica que es normal
+                enemigos.append([random.randint(0, ANCHO - enemigo_tamaño[0]), 0, TIEMPO_DISPARO_ENEMIGO, False])  # False indica que es normal
             temporizador_spawn = 0
 
+        # Mover enemigos y disparar usando el árbol de comportamiento
         for enemigo in enemigos[:]:
-            enemigo[1] += enemigo_velocidad if not enemigo[3] else enemigo_velocidad_especial  # Velocidad especial si es el enemigo morado
-            enemigo[2] += 1
+            arbol = crear_arbol_comportamiento(enemigo, jugador_rect)
+            arbol.run()
 
             # Dibujar enemigos
             if enemigo[3]:  # Si es el enemigo especial
                 screen.blit(enemigo_2, (enemigo[0], enemigo[1]))
             else:
                 screen.blit(enemigo_1, (enemigo[0], enemigo[1]))
+
+            # Verificar si el enemigo puede disparar
+            if enemigo[2] >= TIEMPO_DISPARO_ENEMIGO:
+                # Calcular la dirección del disparo hacia el jugador
+                direccion_x = jugador_rect.centerx - enemigo[0]
+                direccion_y = jugador_rect.centery - enemigo[1]
+                length = math.sqrt(direccion_x ** 2 + direccion_y ** 2)
+                if length != 0:
+                    direccion_x /= length
+                    direccion_y /= length
+                disparos_enemigos.append([enemigo[0] + enemigo_tamaño[0] // 2, enemigo[1], direccion_x * velocidad_disparo_enemigo, direccion_y * velocidad_disparo_enemigo])
+                disparo_enemigo_sonido.play()
+                enemigo[2] = 0  # Reiniciar el temporizador de disparo
+            else:
+                enemigo[2] += 1  # Incrementar el temporizador
+
 # Wilkins Ismael Gervacio Carpio 23-EISN-2-036
             # Verificar si el enemigo está cerca del jugador y puede disparar
             distance = math.sqrt((enemigo[0] - jugador_rect.centerx) ** 2 + (enemigo[1] - jugador_rect.centery) ** 2)
